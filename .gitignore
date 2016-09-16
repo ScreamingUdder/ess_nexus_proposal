@@ -1,3 +1,4 @@
 *.pyc
 .idea
 SANS_test_ESS_format.nxs
+SANS_test_reduced.nxs

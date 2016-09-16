@@ -1,1 +1,3 @@
 *.pyc
+.idea
+SANS_test_ESS_format.nxs

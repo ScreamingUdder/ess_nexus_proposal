@@ -1,6 +1,6 @@
 import h5py
 import numpy as np
-import tables
+import tables  # so that BLOSC library is available
 
 """
 Read data from an event-mode ISIS NeXus file and write it to a new file in proposed format for ESS
@@ -31,19 +31,32 @@ def copy_dataset_with_attributes(out_file, in_file, source_dataset, compress_typ
     target_data = out_file.create_dataset(target_dataset, data[...].shape, dtype=data.dtype,
                                           compression=compress_type, compression_opts=compress_opts)
     target_data[...] = data[...]
-    target_data.attrs = data.attrs
+    try:
+        target_data.attrs = data.attrs
+    except AttributeError:
+        print('ERROR: cannot copy attributes from ' + source_dataset)
 
 
-def copy_object(name):
-    pass
-    # do copy_group_with_attributes if it is a group
-    # do copy_dataset_with_attributes if it is a dataset
+def is_dataset(item):
+    return isinstance(item, h5py.Dataset)
+
+
+def is_group(item):
+    return isinstance(item, h5py.Group)
 
 
 def copy_all(out_file, in_file, group_name, compress_type='gzip', compress_opts=1):
+    def copy_object(name):
+        full_name = group_name + '/' + name
+        if is_group(in_file[full_name]):
+            copy_group_with_attributes(out_file, in_file, full_name)
+        elif is_dataset(in_file[full_name]):
+            copy_dataset_with_attributes(out_file, in_file, full_name, compress_type, compress_opts)
+        else:
+            print('ERROR: ' + full_name + ' is apparently not a group or dataset... is it a link?')
+
+    copy_group_with_attributes(out_file, in_file, group_name)
     in_group = in_file[group_name]
-    group = out_file.create_group(group_name)
-    group.attrs = in_file[group_name].attrs
     in_group.visit(copy_object)
 
 
@@ -130,3 +143,9 @@ rewrite_to_ess_format(input_filename, output_filename)
 # Or, rewrite file with BLOSC compression
 # rewrite_to_ess_format(input_filename, output_filename, 32001, None)
 create_reduced_file_for_comparison(input_filename, reduced_filename, datasets_transferred)
+
+# Try rewriting an entire file
+clear_file('data/entire_file_rewrite.nxs')
+with h5py.File(input_filename, 'r') as source_file:
+    with h5py.File('data/entire_file_rewrite.nxs', 'r+') as target_file:
+        copy_all(target_file, source_file, '/raw_data_1', compress_type=None, compress_opts=None)

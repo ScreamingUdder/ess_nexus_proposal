@@ -148,4 +148,4 @@ create_reduced_file_for_comparison(input_filename, reduced_filename, datasets_tr
 clear_file('data/entire_file_rewrite.nxs')
 with h5py.File(input_filename, 'r') as source_file:
     with h5py.File('data/entire_file_rewrite.nxs', 'r+') as target_file:
-        copy_all(target_file, source_file, '/raw_data_1', compress_type=None, compress_opts=None)
+        copy_all(target_file, source_file, '/raw_data_1')#, compress_type=None, compress_opts=None)

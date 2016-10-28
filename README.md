@@ -1,3 +1,6 @@
-# ess_nexus_proposal
+# Ess NeXus Writer
 
-Scripts for rewriting ISIS NeXus files into experimental NeXus format for ESS. This is intended only to explore different format options and investigate their effect on filesize etc.
+Repository for writing from data stream to ESS NeXus file. This is part of ISIS in-kind deliverables.
+
+Currently contains scripts for rewriting ISIS NeXus files into experimental NeXus format for ESS.
+

@@ -8,6 +8,13 @@ Read data from an event-mode ISIS NeXus file and write it to a new file in propo
 """
 
 
+class Dataset:
+    def __init__(self, name, truncate=None, overwrite_with=None):
+        self.name = name
+        self.truncate = truncate
+        self.overwrite_with = overwrite_with
+
+
 def create_reduced_file_for_comparison(source_filename, target_filename, datasets):
     """
     Create a reduced version of the original file to compare in size to the ESS format file
@@ -20,10 +27,10 @@ def create_reduced_file_for_comparison(source_filename, target_filename, dataset
         with h5py.File(target_filename, 'r+') as target_file:
             copy_group_with_attributes(target_file, source_file, '/raw_data_1')
             copy_group_with_attributes(target_file, source_file, '/raw_data_1/detector_1_events')
-            copy_group_with_attributes(target_file, source_file, '/raw_data_1/instrument')
-            target_file.copy(source_file['/raw_data_1/instrument/source'], '/raw_data_1/instrument/source')
+            # copy_group_with_attributes(target_file, source_file, '/raw_data_1/instrument')
+            # target_file.copy(source_file['/raw_data_1/instrument/source'], '/raw_data_1/instrument/source')
             for dataset in datasets:
-                target_file.copy(source_file[dataset], dataset)
+                copy_dataset_with_attributes(target_file, source_file, dataset.name, truncate=dataset.truncate)
 
 
 def rewrite_to_ess_format(source_filename, target_filename, compress_type='gzip', compress_opts=1):
@@ -74,15 +81,23 @@ def rewrite_to_ess_format(source_filename, target_filename, compress_type='gzip'
             step_index[...] = event_index[...]
 
 
+def rewrite_entire_file(source_filename, target_filename):
+    clear_file(target_filename)
+    with h5py.File(source_filename, 'r') as source_file:
+        with h5py.File(target_filename, 'r+') as target_file:
+            copy_all(target_file, source_file, '/raw_data_1', compress_type='gzip', compress_opts=1)
+
+
 input_filename = 'data/SANS_test.nxs'
 output_filename = 'data/SANS_test_ESS_format.nxs'
 reduced_filename = 'data/SANS_test_reduced.nxs'
 
-datasets_transferred = [
-    '/raw_data_1/detector_1_events/event_id',
-    '/raw_data_1/detector_1_events/event_index',
-    '/raw_data_1/detector_1_events/event_time_offset',
-    '/raw_data_1/detector_1_events/event_time_zero'
+datasets_to_copy = [
+    Dataset('/raw_data_1/detector_1_events/event_id', truncate=7814),
+    Dataset('/raw_data_1/detector_1_events/event_index', truncate=10),
+    Dataset('/raw_data_1/detector_1_events/event_time_offset', truncate=7814),
+    Dataset('/raw_data_1/detector_1_events/event_time_zero', truncate=10),
+    Dataset('/raw_data_1/detector_1_events/total_counts')
 ]
 
 clear_file(output_filename)
@@ -90,10 +105,7 @@ clear_file(output_filename)
 rewrite_to_ess_format(input_filename, output_filename)
 # Or, rewrite file with BLOSC compression
 # rewrite_to_ess_format(input_filename, output_filename, 32001, None)
-create_reduced_file_for_comparison(input_filename, reduced_filename, datasets_transferred)
+create_reduced_file_for_comparison(input_filename, reduced_filename, datasets_to_copy)
 
-# Try rewriting an entire file
-clear_file('data/entire_file_rewrite.nxs')
-with h5py.File(input_filename, 'r') as source_file:
-    with h5py.File('data/entire_file_rewrite.nxs', 'r+') as target_file:
-        copy_all(target_file, source_file, '/raw_data_1', compress_type='gzip', compress_opts=1)
+# This is necessary to actually remove truncated data and reduce file size
+rewrite_entire_file(reduced_filename, 'data/SANS_test_reduced_small.nxs')

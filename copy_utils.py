@@ -15,13 +15,18 @@ def copy_group_with_attributes(out_file, in_file, group_name):
 
 
 def copy_dataset_with_attributes(out_file, in_file, source_dataset, compress_type='gzip',
-                                 compress_opts=1, target_dataset=None):
+                                 compress_opts=1, target_dataset=None, truncate=None):
     if not target_dataset:
         target_dataset = source_dataset
     data = in_file.get(source_dataset)
-    target_data = out_file.create_dataset(target_dataset, data[...].shape, dtype=data.dtype,
-                                          compression=compress_type, compression_opts=compress_opts)
-    target_data[...] = data[...]
+    if not truncate:
+        target_data = out_file.create_dataset(target_dataset, data[...].shape, dtype=data.dtype,
+                                              compression=compress_type, compression_opts=compress_opts)
+        target_data[...] = data[...]
+    else:
+        target_data = out_file.create_dataset(target_dataset, data[:truncate].shape, dtype=data.dtype,
+                                              compression=compress_type, compression_opts=compress_opts)
+        target_data[...] = data[:truncate]
     try:
         for name, value in data.attrs.items():
             target_data.attrs[name] = value

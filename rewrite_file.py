@@ -8,7 +8,7 @@ Read data from an event-mode ISIS NeXus file and write it to a new file in propo
 """
 
 
-class Dataset:
+class DatasetToCopy:
     def __init__(self, name, truncate=None, overwrite_with=None):
         self.name = name
         self.truncate = truncate
@@ -16,6 +16,29 @@ class Dataset:
             self.overwrite_with = np.array(overwrite_with)
         else:
             self.overwrite_with = overwrite_with
+
+
+class DatasetToCreate:
+    def __init__(self, name, data, attributes):
+        self.name = name
+        self.attributes = attributes
+        if not isinstance(data, np.ndarray):
+            self.data = np.array(data)
+        else:
+            self.data = data
+
+
+def create_dataset(out_file, dataset_name, data, attributes, compress_type='gzip', compress_opts=1):
+    if not isinstance(data, np.ndarray):
+        print "data argument specified for " + dataset_name + " must be a numpy array"
+        return
+    target_data = out_file.create_dataset(dataset_name, data.shape, dtype=data.dtype, data=data,
+                                          compression=compress_type, compression_opts=compress_opts)
+    try:
+        for name, value in attributes.items():
+            target_data.attrs[name] = value
+    except AttributeError:
+        print('ERROR: failed to write attributes for ' + dataset_name)
 
 
 def create_reduced_file_for_comparison(source_filename, target_filename, datasets):
@@ -33,8 +56,11 @@ def create_reduced_file_for_comparison(source_filename, target_filename, dataset
             # copy_group_with_attributes(target_file, source_file, '/raw_data_1/instrument')
             # target_file.copy(source_file['/raw_data_1/instrument/source'], '/raw_data_1/instrument/source')
             for dataset in datasets:
-                copy_dataset_with_attributes(target_file, source_file, dataset.name, truncate=dataset.truncate,
-                                             overwrite_with=dataset.overwrite_with)
+                if isinstance(dataset, DatasetToCopy):
+                    copy_dataset_with_attributes(target_file, source_file, dataset.name, truncate=dataset.truncate,
+                                                 overwrite_with=dataset.overwrite_with)
+                elif isinstance(dataset, DatasetToCreate):
+                    create_dataset(target_file, dataset.name, dataset.data, dataset.attributes)
 
 
 def rewrite_to_ess_format(source_filename, target_filename, compress_type='gzip', compress_opts=1):
@@ -96,12 +122,13 @@ input_filename = 'data/SANS_test.nxs'
 output_filename = 'data/SANS_test_ESS_format.nxs'
 reduced_filename = 'data/SANS_test_reduced.nxs'
 
-datasets_to_copy = [
-    Dataset('/raw_data_1/detector_1_events/event_id', truncate=7814),
-    Dataset('/raw_data_1/detector_1_events/event_index', truncate=10),
-    Dataset('/raw_data_1/detector_1_events/event_time_offset', truncate=7814),
-    Dataset('/raw_data_1/detector_1_events/event_time_zero', truncate=10),
-    Dataset('/raw_data_1/detector_1_events/total_counts', overwrite_with=np.array(7814))
+datasets = [
+    DatasetToCopy('/raw_data_1/detector_1_events/event_id', truncate=7814),
+    DatasetToCopy('/raw_data_1/detector_1_events/event_index', truncate=10),
+    DatasetToCopy('/raw_data_1/detector_1_events/event_time_offset', truncate=7814),
+    DatasetToCopy('/raw_data_1/detector_1_events/event_time_zero', truncate=10),
+    DatasetToCopy('/raw_data_1/detector_1_events/total_counts', overwrite_with=np.array(7814)),
+    DatasetToCreate('/raw_data_1/detector_1_events/test_create_cue', [1, 2, 3, 4, 5], {'units': 'something'})
 ]
 
 clear_file(output_filename)
@@ -109,7 +136,7 @@ clear_file(output_filename)
 rewrite_to_ess_format(input_filename, output_filename)
 # Or, rewrite file with BLOSC compression
 # rewrite_to_ess_format(input_filename, output_filename, 32001, None)
-create_reduced_file_for_comparison(input_filename, reduced_filename, datasets_to_copy)
+create_reduced_file_for_comparison(input_filename, reduced_filename, datasets)
 
 # This is necessary to actually remove truncated data and reduce file size
 rewrite_entire_file(reduced_filename, 'data/SANS_test_reduced_small.nxs')

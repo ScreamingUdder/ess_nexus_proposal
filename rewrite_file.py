@@ -12,7 +12,10 @@ class Dataset:
     def __init__(self, name, truncate=None, overwrite_with=None):
         self.name = name
         self.truncate = truncate
-        self.overwrite_with = overwrite_with
+        if not isinstance(overwrite_with, np.ndarray):
+            self.overwrite_with = np.array(overwrite_with)
+        else:
+            self.overwrite_with = overwrite_with
 
 
 def create_reduced_file_for_comparison(source_filename, target_filename, datasets):
@@ -30,7 +33,8 @@ def create_reduced_file_for_comparison(source_filename, target_filename, dataset
             # copy_group_with_attributes(target_file, source_file, '/raw_data_1/instrument')
             # target_file.copy(source_file['/raw_data_1/instrument/source'], '/raw_data_1/instrument/source')
             for dataset in datasets:
-                copy_dataset_with_attributes(target_file, source_file, dataset.name, truncate=dataset.truncate)
+                copy_dataset_with_attributes(target_file, source_file, dataset.name, truncate=dataset.truncate,
+                                             overwrite_with=dataset.overwrite_with)
 
 
 def rewrite_to_ess_format(source_filename, target_filename, compress_type='gzip', compress_opts=1):
@@ -97,7 +101,7 @@ datasets_to_copy = [
     Dataset('/raw_data_1/detector_1_events/event_index', truncate=10),
     Dataset('/raw_data_1/detector_1_events/event_time_offset', truncate=7814),
     Dataset('/raw_data_1/detector_1_events/event_time_zero', truncate=10),
-    Dataset('/raw_data_1/detector_1_events/total_counts')
+    Dataset('/raw_data_1/detector_1_events/total_counts', overwrite_with=np.array(7814))
 ]
 
 clear_file(output_filename)

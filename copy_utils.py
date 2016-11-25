@@ -15,11 +15,21 @@ def copy_group_with_attributes(out_file, in_file, group_name):
 
 
 def copy_dataset_with_attributes(out_file, in_file, source_dataset, compress_type='gzip',
-                                 compress_opts=1, target_dataset=None, truncate=None):
+                                 compress_opts=1, target_dataset=None, truncate=None, overwrite_with=None):
     if not target_dataset:
         target_dataset = source_dataset
     data = in_file.get(source_dataset)
-    if not truncate:
+    if data.size == 1:
+        compress_type = None
+        compress_opts = None
+    if overwrite_with:
+        if not isinstance(overwrite_with, np.ndarray):
+            print "overwrite_with argument specified for target_dataset must be a numpy array"
+            return
+        target_data = out_file.create_dataset(target_dataset, overwrite_with.shape, dtype=data.dtype,
+                                              compression=compress_type, compression_opts=compress_opts)
+        target_data[...] = overwrite_with
+    elif not truncate:
         target_data = out_file.create_dataset(target_dataset, data[...].shape, dtype=data.dtype,
                                               compression=compress_type, compression_opts=compress_opts)
         target_data[...] = data[...]

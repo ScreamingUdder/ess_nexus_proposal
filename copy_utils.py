@@ -24,7 +24,7 @@ def copy_dataset_with_attributes(out_file, in_file, source_dataset, compress_typ
         compress_opts = None
     if overwrite_with:
         if not isinstance(overwrite_with, np.ndarray):
-            print "overwrite_with argument specified for target_dataset must be a numpy array"
+            print "overwrite_with argument specified for " + target_dataset + " must be a numpy array"
             return
         target_data = out_file.create_dataset(target_dataset, overwrite_with.shape, dtype=data.dtype,
                                               compression=compress_type, compression_opts=compress_opts)

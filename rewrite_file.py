@@ -19,7 +19,7 @@ class DatasetToCopy:
 
 
 class DatasetToCreate:
-    def __init__(self, name, data, attributes):
+    def __init__(self, name, data, attributes=None):
         self.name = name
         self.attributes = attributes
         if not isinstance(data, np.ndarray):
@@ -28,17 +28,18 @@ class DatasetToCreate:
             self.data = data
 
 
-def create_dataset(out_file, dataset_name, data, attributes, compress_type='gzip', compress_opts=1):
+def create_dataset(out_file, dataset_name, data, attributes=None, compress_type='gzip', compress_opts=1):
     if not isinstance(data, np.ndarray):
         print "data argument specified for " + dataset_name + " must be a numpy array"
         return
     target_data = out_file.create_dataset(dataset_name, data.shape, dtype=data.dtype, data=data,
                                           compression=compress_type, compression_opts=compress_opts)
-    try:
-        for name, value in attributes.items():
-            target_data.attrs[name] = value
-    except AttributeError:
-        print('ERROR: failed to write attributes for ' + dataset_name)
+    if attributes:
+        try:
+            for name, value in attributes.items():
+                target_data.attrs[name] = value
+        except AttributeError:
+            print('ERROR: failed to write attributes for ' + dataset_name)
 
 
 def create_reduced_file_for_comparison(source_filename, target_filename, datasets):
@@ -127,8 +128,10 @@ datasets = [
     DatasetToCopy('/raw_data_1/detector_1_events/event_index', truncate=10),
     DatasetToCopy('/raw_data_1/detector_1_events/event_time_offset', truncate=7814),
     DatasetToCopy('/raw_data_1/detector_1_events/event_time_zero', truncate=10),
-    DatasetToCopy('/raw_data_1/detector_1_events/total_counts', overwrite_with=np.array(7814)),
-    DatasetToCreate('/raw_data_1/detector_1_events/test_create_cue', [1, 2, 3, 4, 5], {'units': 'something'})
+    DatasetToCopy('/raw_data_1/detector_1_events/total_counts', overwrite_with=7814),
+    DatasetToCreate('/raw_data_1/detector_1_events/cue_timestamp_zero', [0.05, 0.12, 0.33],
+                    {'units': 'second', 'offset': '2016-04-12T02:58:52'}),
+    DatasetToCreate('/raw_data_1/detector_1_events/cue_index', [349, 872, 1624])
 ]
 
 clear_file(output_filename)
